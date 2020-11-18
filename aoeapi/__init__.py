@@ -17,7 +17,7 @@ MATCH_DATA_URL = BASE_URL_V2 + 'GetMPMatchDetail'
 MATCH_DATA_URL_AOE2NET = BASE_URL_AOE2NET + 'match'
 LADDER_URL = BASE_URL_AOE2NET + 'leaderboard'
 REC_DOWNLOAD_URL = 'https://aoe.ms/replay/'
-LADDER_RESULT_LIMIT = 200
+LADDER_RESULT_LIMIT = 400
 USER_MATCH_LIMIT = 1000
 LADDER_MATCH_LIMIT = 1000
 LADDERS = {
@@ -79,10 +79,13 @@ def get_ladder_matches(ladder_id, from_timestamp=None,
     for rank in get_ladder(REF_LADDERS[ladder_id] if reference_1v1 else ladder_id):
         profile_ids.append(str(rank['uid']))
     matches = []
-    for user_match in get_user_matches(profile_ids, ladder_id, from_timestamp=from_timestamp):
-        matches.append(user_match)
-        if len(matches) == limit:
-            break
+    step = 10
+    for i in range(0, len(profile_ids), step):
+        for user_match in get_user_matches(profile_ids[i:i + step], ladder_id, from_timestamp=from_timestamp):
+            matches.append(user_match)
+            if len(matches) == limit:
+                LOGGER.info("Fetched %d matches", len(matches))
+                return matches
     LOGGER.info("Fetched %d matches", len(matches))
     return matches
 
