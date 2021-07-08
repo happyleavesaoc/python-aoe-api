@@ -17,7 +17,7 @@ MATCH_DATA_URL = BASE_URL_V2 + 'GetMPMatchDetail'
 MATCH_DATA_URL_AOE2NET = BASE_URL_AOE2NET + 'match'
 LADDER_URL = BASE_URL_AOE2NET + 'leaderboard'
 REC_DOWNLOAD_URL = 'https://aoe.ms/replay/'
-LADDER_RESULT_LIMIT = 400
+LADDER_RESULT_LIMIT = 300
 USER_MATCH_LIMIT = 1000
 LADDER_MATCH_LIMIT = 1000
 LADDERS = {
@@ -25,14 +25,18 @@ LADDERS = {
     1: '1v1 Deathmatch',
     2: 'Team Deathmatch',
     3: '1v1 RandomMap',
-    4: 'Team RandomMap'
+    4: 'Team RandomMap',
+    13: '1v1 Empire Wars',
+    14: 'Team Empire Wars'
 }
 REF_LADDERS = {
     0: 3,
     1: 1,
     2: 1,
     3: 3,
-    4: 4
+    4: 3,
+    13: 13,
+    14: 13
 }
 
 MATCH_CACHE = dict()
@@ -80,8 +84,12 @@ def get_ladder_matches(ladder_id, from_timestamp=None,
         profile_ids.append(str(rank['uid']))
     matches = []
     step = 10
+    seen = set()
     for i in range(0, len(profile_ids), step):
         for user_match in get_user_matches(profile_ids[i:i + step], ladder_id, from_timestamp=from_timestamp):
+            if user_match['match_id'] in seen:
+                continue
+            seen.add(user_match['match_id'])
             matches.append(user_match)
             if len(matches) == limit:
                 LOGGER.info("Fetched %d matches", len(matches))
@@ -160,7 +168,10 @@ def get_match(match_id):
 def download_rec(url, target):
     """Download a recorded game."""
     LOGGER.info("Downloading rec from %s", url)
-    resp = requests.get(url)
+    try:
+        resp = requests.get(url)
+    except requests.exceptions.ConnectionError:
+        raise AoeApiError("failed to download rec")
     if resp.status_code == 500:
         raise AoeApiError("rec does not exist")
     try:
